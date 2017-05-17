@@ -24,6 +24,8 @@ import java.sql.SQLException;
 public class Main extends Application {
 
     @FXML
+    private Label debugLabel;
+    @FXML
     private Pane pane;
     @FXML
     private ImageView MainView;
@@ -42,7 +44,6 @@ public class Main extends Application {
     @FXML
     private StatusBar status;
 
-    private Stage MainWindow;
     private String BasePath;
     private Database mainDB;
     private int MaxCount;
@@ -51,7 +52,6 @@ public class Main extends Application {
 
     @Override
     public void start(Stage primaryStage) throws Exception{
-        MainWindow = primaryStage;
         Parent root = FXMLLoader.load(getClass().getResource("Main.fxml"));
         primaryStage.setMinWidth(900);
         primaryStage.setMinHeight(700);
@@ -97,22 +97,23 @@ public class Main extends Application {
     private void SetImage(Image image){
         MainView.setPreserveRatio(true);
         MainView.setSmooth(true);
-        MainView.setFitWidth(pane.getWidth());
-        MainView.setFitHeight(pane.getHeight());
-        if(image.getWidth() < pane.getWidth()) MainView.setFitWidth(image.getWidth());
-        if(image.getHeight() < pane.getHeight()) MainView.setFitHeight(image.getHeight());
+        MainView.setFitWidth(image.getWidth());
+        MainView.setFitHeight(image.getHeight());
+        if(image.getWidth() > pane.getWidth()) MainView.setFitWidth(pane.getWidth());
+        if(image.getHeight() > pane.getHeight()) MainView.setFitHeight(pane.getHeight());
+        // 中心移動
         MainView.setX(pane.getWidth()/2 - MainView.getFitWidth()/2);
         MainView.setY(pane.getHeight()/2 - MainView.getFitHeight()/2);
         MainView.setImage(image);
+        debugLabel.setText(pane.getWidth() + "x" + pane.getHeight() + " - " + MainView.getFitWidth() + "x" + MainView.getFitHeight());
         pane.requestLayout();
     }
 
-    @FXML
     public void OpenMenuAction(ActionEvent event) throws SQLException {
         FileChooser fc = new FileChooser();
         fc.setTitle("ファイルを開く");
         fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("DBファイル","*.db"));
-        File importFile = fc.showOpenDialog(MainWindow);
+        File importFile = fc.showOpenDialog(pane.getScene().getWindow());
         if (importFile != null) {
             BasePath = importFile.getParent();
             mainDB = new Database(importFile.toURI().toString());
@@ -125,25 +126,25 @@ public class Main extends Application {
         }
     }
 
-    public void ReloadMenuAction(ActionEvent event){
-
+    public void ReloadMenuAction(ActionEvent event) throws SQLException{
+        if(mainDB != null) mainDB.Reload();
+        MaxCount = mainDB.GetMaxCount();
+        File[] files = new File(BasePath).listFiles(pathName -> pathName.isFile());
+        for (File file:files) {
+            Filelist.add(file.toPath().toString());
+        }
+        status.setText("DBファイルをリロードしました");
     }
 
     public void NextMenuAction(ActionEvent event){
         NowCount++;
-        if(NowCount >= MaxCount){
-            NowCount = 0;
-            status.setText("最初に戻ります");
-        }
+        if(NowCount >= MaxCount) NowCount = 0;
         SceneMaker(NowCount);
     }
 
     public void PrevMenuAction(ActionEvent event){
         NowCount--;
-        if(NowCount < 0){
-            NowCount = MaxCount - 1;
-            status.setText("最後に戻ります");
-        }
+        if(NowCount < 0) NowCount = MaxCount - 1;
         SceneMaker(NowCount);
     }
 
